@@ -2,8 +2,10 @@
 
 use std::error::Error;
 
-use axum::{http::StatusCode, response::{Html, IntoResponse}, routing::{get, post}, serve::Serve, Router};
+use axum::{response::Html, routing::{get, post}, serve::Serve, Router};
 use tower_http::services::ServeDir;
+use crate::routes::{login, logout, signup, verify2fa, verifytoken};
+pub mod routes;
 
 pub struct Application {
     server: Serve<Router, Router>,
@@ -44,24 +46,4 @@ async fn hello_handler() -> Html<&'static str> {
     Html("<h1>Hello from sprint 1</h1>")
 }
 
-async fn signup() -> impl IntoResponse {
-    StatusCode::OK.into_response()
-}
 
-async fn login() -> impl IntoResponse {
-    StatusCode::OK.into_response()
-}
-
-async fn logout() -> impl IntoResponse {
-    StatusCode::OK.into_response()
-}
-
-
-async fn verify2fa() -> impl IntoResponse {
-    StatusCode::OK.into_response()
-}
-
-
-async fn verifytoken() -> impl IntoResponse {
-    StatusCode::OK.into_response()
-}

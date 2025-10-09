@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use auth_service::Application;
+use uuid::Uuid;
 
 pub struct TestApp {
     pub address: String,
@@ -37,15 +38,13 @@ impl TestApp {
     // TODO: Implement helper functions for all other routes (signup, login,
     // logout, verify-2fa and verify-token)
 
-    pub async fn signup(&self) -> reqwest::Response {
-        let mut params = HashMap::new();
-
-        params.insert("email", "johndoe@example.com");
-        params.insert("password", "password123");
-        params.insert("requires2FA", "True");       
+    pub async fn signup<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize
+     {
         self.http_client
             .post(format!("{}/signup", &self.address))
-            .form(&params)
+            .json(body)
             .send()
             .await
             .expect("Failed to post to signup route")
@@ -101,5 +100,9 @@ impl TestApp {
             .expect("Failed to post to verify-token route")
         
     }
+}
+
+pub fn get_random_email()-> String {
+    format!("{}@example.com", Uuid::new_v4())
 }
 
