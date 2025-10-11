@@ -50,14 +50,11 @@ impl TestApp {
             .expect("Failed to post to signup route")
     }
 
-    pub async fn login(&self) -> reqwest::Response {
-        let mut params = HashMap::new();
+    pub async fn login<B:serde::Serialize>(&self, body: &B) -> reqwest::Response {
 
-        params.insert("email", "johndoe@example.com");
-        params.insert("password", "password123");
         self.http_client
             .post(format!("{}/login", &self.address))
-            .form(&params)
+            .json(body)
             .send()
             .await
             .expect("Failed to post to login route")
@@ -74,27 +71,20 @@ impl TestApp {
         
     }
 
-    pub async fn verify2fa(&self) -> reqwest::Response {
-        let mut params = HashMap::new();
-
-        params.insert("email", "johndoe@example.com");
-        params.insert("loginAttemptID", "123");
-        params.insert("2FACode", "123");
+    pub async fn verify2fa<B: serde::Serialize>(&self, body: &B) -> reqwest::Response {
         self.http_client
             .post(format!("{}/verify-2fa", &self.address))
-            .form(&params)
+            .json(body)
             .send()
             .await
             .expect("Failed to post to verify2FA route")
         
     }
-    pub async fn verifytoken(&self) -> reqwest::Response {
-        let mut params = HashMap::new();
+    pub async fn verifytoken<B: serde::Serialize> (&self, body: &B) -> reqwest::Response {
 
-        params.insert("token", "example token");
         self.http_client
             .post(format!("{}/verify-token", &self.address))
-            .form(&params)
+            .json(body)
             .send()
             .await
             .expect("Failed to post to verify-token route")
