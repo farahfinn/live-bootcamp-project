@@ -61,3 +61,50 @@ async fn should_return_422_if_malformed_input() {
     }
 }
 
+#[tokio::test]
+async fn should_return_400_if_invalid_input() {
+    let app = TestApp::new().await;
+    // The input is considered invalid if:
+    // - The email is empty or does not contain '@'
+    // - The password is less than 8 characters
+    let invalid_inputs = [
+        serde_json::json!({
+            "email" : "",
+            "password": "password132",
+            "requires2FA": true,
+        }),
+        serde_json::json!({
+            "email" : "noatsymbol.com",
+            "password": "password132",
+            "requires2FA": true,
+        }),
+        serde_json::json!({
+            "email" : "example@email.com",
+            "password": "short",
+            "requires2FA": true,
+        })
+    ];
+
+    for input in invalid_inputs.iter(){
+        let response = app.signup(input).await;
+
+        assert_eq!(response.status().as_u16(), 400);
+    }
+}
+
+
+#[tokio::test]
+async fn should_return_409_if_email_already_exists() {
+    let app = TestApp::new().await;
+ 
+    let input = serde_json::json!({
+         "email": "example@email.com",
+         "password": "validpassword1235",
+         "requires2FA": true,
+    });
+    // Call the signup route twice. The second request should fail with a 409 HTTP status code    
+    app.signup(&input).await;
+    let response = app.signup(&input).await;
+
+    assert_eq!(response.status().as_u16(), 409);
+}
