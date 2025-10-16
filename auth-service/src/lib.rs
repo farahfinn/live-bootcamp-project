@@ -5,7 +5,7 @@ use std::error::Error;
 use axum::{http::StatusCode, response::{Html, IntoResponse}, routing::{get, post}, serve::Serve, Json, Router};
 use serde::{Deserialize, Serialize};
 use tower_http::services::ServeDir;
-use crate::{app_state::AppState, domain::error::AuthAPIError, routes::{login, logout, signup, verify2fa, verifytoken}};
+use crate::{app_state::AppState, domain::error::AuthAPIError, routes::{login, logout, signup, verify2fa, verifytoken}, services::hashmap_user_store::HashmapUserStore};
 
 
 pub mod routes;
@@ -22,7 +22,7 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build(app_state: AppState, address: &str ) -> Result<Self, Box<dyn Error>> {
+    pub async fn build(app_state: AppState<HashmapUserStore>, address: &str ) -> Result<Self, Box<dyn Error>> {
         // Move the Router definiton from `main.rs` to here.
         // Also, remover the `hello` route.
         // We don't need it at this point!

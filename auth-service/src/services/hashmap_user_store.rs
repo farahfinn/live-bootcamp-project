@@ -1,22 +1,16 @@
 use std::collections::HashMap;
 
-use crate::domain::user::User;
+use crate::domain::{data_store::{UserStore, UserStoreError}, user::User};
 
-#[derive(Debug, PartialEq)]
-pub enum UserStoreError {
-    UserAlreadyExists,
-    UserNotFound,
-    InvalidCredentials,
-    UnexpecteError,
-}
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct HashmapUserStore {
     pub users: HashMap<String, User>,
 }
 
-impl HashmapUserStore {
-    pub fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
+#[async_trait::async_trait]
+impl UserStore for HashmapUserStore {
+   async fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
         if self.users.contains_key(&user.email) {
             Err(UserStoreError::UserAlreadyExists)
         } else {
@@ -25,14 +19,14 @@ impl HashmapUserStore {
         }
     }
 
-    pub fn get_user(&self, email: &str) -> Result<User, UserStoreError> {
+   async fn get_user(&self, email: &str) -> Result<User, UserStoreError> {
         match self.users.get(email) {
             Some(user) => Ok(user.clone()),
             None => Err(UserStoreError::UserNotFound),
         }
     }
 
-    pub fn validate_user(&self, email: &str, password: &str) -> Result<(), UserStoreError> {
+    async fn validate_user(&self, email: &str, password: &str) -> Result<(), UserStoreError> {
         if let Some(user) = self.users.get(email) {
             match user.password.as_str().cmp(password) {
                 std::cmp::Ordering::Equal => Ok(()),
@@ -60,7 +54,7 @@ mod tests {
         let mut store = HashmapUserStore{users};
 
         let user2 = User::new("email2@example.com".into(), "safepassword".into(), true);
-        assert_eq!(store.add_user(user2), Ok(()));
+        assert_eq!(store.add_user(user2).await, Ok(()));
     }
 
     #[tokio::test]
@@ -73,7 +67,7 @@ mod tests {
         ]);
         
         let store = HashmapUserStore{users};
-        assert_eq!(store.get_user("email@example.com"), Ok(User{email, password, requires_2fa: true }));
+        assert_eq!(store.get_user("email@example.com").await, Ok(User{email, password, requires_2fa: true }));
     }
 
     #[tokio::test]
@@ -87,6 +81,6 @@ mod tests {
         
         let store = HashmapUserStore{users};
 
-        assert_eq!(store.validate_user(&email, &password), Ok(()));
+        assert_eq!(store.validate_user(&email, &password).await, Ok(()));
     }
 }

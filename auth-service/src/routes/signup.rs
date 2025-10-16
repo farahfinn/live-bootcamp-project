@@ -1,9 +1,9 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 
-use crate::{app_state::AppState, domain::{error::AuthAPIError, user::User}};
+use crate::{app_state::AppState, domain::{data_store::UserStore, error::AuthAPIError, user::User}, services::hashmap_user_store::HashmapUserStore};
 // Order of parameters is important in the handler
-pub async fn signup(State(state): State<AppState>, Json(request): Json<SignupRequest>, ) -> Result<impl IntoResponse, AuthAPIError> {
+pub async fn signup(State(state): State<AppState<HashmapUserStore>>, Json(request): Json<SignupRequest>, ) -> Result<impl IntoResponse, AuthAPIError> {
 
     let email = request.email;
     let password = request.password;
@@ -24,7 +24,7 @@ pub async fn signup(State(state): State<AppState>, Json(request): Json<SignupReq
     if user_store.users.contains_key(&email) {
         return Err(AuthAPIError::UserAlreadyExists);
     }
-    match user_store.add_user(user) {
+    match user_store.add_user(user).await {
         Ok(()) => {
             
             let response = Json( SignupResponse {
