@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::{domain::data_store::UserStore, services::hashmap_user_store::HashmapUserStore};
+use crate::domain::data_store::UserStore;
 
 // pub type UserStoreType = Arc<RwLock<HashmapUserStore>>;
 

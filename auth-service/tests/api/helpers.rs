@@ -13,12 +13,10 @@ pub struct TestApp {
 impl TestApp {
     pub async fn new() -> Self {
         let user_store: HashMap<String, User> = HashMap::new();
-        let app_state  = AppState{
-            user_store: Arc::new(RwLock::new(
+        let app_state  = AppState::new(Arc::new(RwLock::new(
                 HashmapUserStore{
                     users: user_store
-                }))
-        };
+                })));
         let app = Application::build(app_state, "127.0.0.1:0" )
             .await
             .expect("Failed to build app");
