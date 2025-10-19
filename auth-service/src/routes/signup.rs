@@ -1,15 +1,12 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 
-use crate::{app_state::AppState, domain::{data_store::UserStore, error::AuthAPIError, user::User}, services::hashmap_user_store::HashmapUserStore};
+use crate::{app_state::AppState, domain::{data_store::UserStore, email::Email, error::AuthAPIError, password::Password, user::User}, services::hashmap_user_store::HashmapUserStore};
 // Order of parameters is important in the handler
-pub async fn signup(State(state): State<AppState<HashmapUserStore>>, Json(request): Json<SignupRequest>, ) -> Result<impl IntoResponse, AuthAPIError> {
+pub async fn signup(State(state): State<AppState<HashmapUserStore>>,Json(request): Json<SignupRequest> ) -> Result<impl IntoResponse, AuthAPIError> {
 
-    let email = request.email;
-    let password = request.password;
-    if email.is_empty() || !email.contains("@") || password.len() < 8 {
-        return Err(AuthAPIError::InvalidCredentials);
-    };
+    let email = Email::parse(request.email).map_err(|_| AuthAPIError::InvalidCredentials)?;
+    let password = Password::parse(request.password).map_err(|_| AuthAPIError::InvalidCredentials)?;
     let user = User {
         email: email.clone(),
         password,

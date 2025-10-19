@@ -1,7 +1,7 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use auth_service::{app_state::AppState, domain::user::User, services::hashmap_user_store::HashmapUserStore, Application};
+use auth_service::{app_state::AppState, domain::{email::Email, user::User}, services::hashmap_user_store::HashmapUserStore, Application};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
@@ -12,7 +12,7 @@ pub struct TestApp {
 
 impl TestApp {
     pub async fn new() -> Self {
-        let user_store: HashMap<String, User> = HashMap::new();
+        let user_store: HashMap<Email, User> = HashMap::new();
         let app_state  = AppState::new(Arc::new(RwLock::new(
                 HashmapUserStore{
                     users: user_store

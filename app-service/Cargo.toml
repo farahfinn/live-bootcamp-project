@@ -14,3 +14,9 @@ reqwest = { version = "0.11", default-features = false, features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 askama = "0.12.1"
+validator = "0.16.1"
+
+[dev-dependencies]
+fake = "2.3.0"
+quickcheck = "0.9.2"
+quickcheck_macros = "0.9.1"
