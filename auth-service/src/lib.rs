@@ -2,10 +2,10 @@
 
 use std::error::Error;
 
-use axum::{http::StatusCode, response::{Html, IntoResponse}, routing::{get, post}, serve::Serve, Json, Router};
+use axum::{http::{Method, StatusCode}, response::IntoResponse, routing::post, serve::Serve, Json, Router};
 use serde::{Deserialize, Serialize};
-use tower_http::services::ServeDir;
-use crate::{app_state::AppState, domain::error::AuthAPIError, routes::{login, logout, signup, verify2fa, verifytoken}, services::hashmap_user_store::HashmapUserStore};
+use tower_http::{cors::CorsLayer, services::ServeDir};
+use crate::{app_state::AppState, domain::error::AuthAPIError, routes::{login, logout, signup, verify2fa, verify_token }, services::hashmap_user_store::HashmapUserStore};
 
 
 pub mod routes;
@@ -23,18 +23,25 @@ pub struct Application {
 
 impl Application {
     pub async fn build(app_state: AppState<HashmapUserStore>, address: &str ) -> Result<Self, Box<dyn Error>> {
-        // Move the Router definiton from `main.rs` to here.
-        // Also, remover the `hello` route.
-        // We don't need it at this point!
+        // Allow the app service (running on our local machine & in production) to call the auth service
+        let allowed_origins = [
+            "http://localhost:8000".parse()?,
+            // TODO when deploying
+            // http://DROPLETIP:8000
+        ];
+        let cors = CorsLayer::new()
+            .allow_methods([Method::GET, Method::POST])
+            .allow_credentials(true)
+            .allow_origin(allowed_origins);
         let router = Router::new()
             .nest_service("/", ServeDir::new("assets"))
-            .route("/hello", get(hello_handler))
             .route("/signup", post(signup))
             .route("/login", post(login))
             .route("/logout", post(logout))
             .route("/verify-2fa", post(verify2fa))
-            .route("/verify-token", post(verifytoken))
-            .with_state(app_state);
+            .route("/verify-token", post(verify_token))
+            .with_state(app_state)
+            .layer(cors);
 
         let listener = tokio::net::TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
@@ -48,10 +55,6 @@ impl Application {
         println!("listening on {}", &self.address);
         self.server.await
     }
-}
-async fn hello_handler() -> Html<&'static str> {
-    // TODO: Update this to a custom message!
-    Html("<h1>Hello from sprint 1</h1>")
 }
 
 

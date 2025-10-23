@@ -33,7 +33,7 @@ pub enum GenerateTokenError {
 // Ths value determines how long the JWT auth token is valid for
 pub const TOKEN_TTL_SECDONDS: i64 = 600;
 
-// Create JWT suth token
+// Create JWT auth token
 fn generate_auth_token(email: &Email) -> Result<String, GenerateTokenError> {
     let delta = chrono::Duration::try_seconds(TOKEN_TTL_SECDONDS).ok_or(GenerateTokenError::UnexpectedError)?;
 

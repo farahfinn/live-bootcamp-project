@@ -1,7 +1,7 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use auth_service::{app_state::AppState, domain::{email::Email, user::User}, services::hashmap_user_store::HashmapUserStore, Application};
+use auth_service::{app_state::AppState, domain::{email::Email, user::User}, services::hashmap_user_store::HashmapUserStore, utils::constants::test, Application};
 use reqwest::cookie::Jar;
 use tokio::sync::RwLock;
 use uuid::Uuid;
@@ -19,7 +19,7 @@ impl TestApp {
                 HashmapUserStore{
                     users: user_store
                 })));
-        let app = Application::build(app_state, "127.0.0.1:0" )
+        let app = Application::build(app_state, test::APP_ADDRESS )
             .await
             .expect("Failed to build app");
         let address = format!("http://{}", app.address.clone());
@@ -93,7 +93,7 @@ impl TestApp {
             .expect("Failed to post to verify2FA route")
         
     }
-    pub async fn verifytoken<B: serde::Serialize> (&self, body: &B) -> reqwest::Response {
+    pub async fn verify_token<B: serde::Serialize> (&self, body: &B) -> reqwest::Response {
 
         self.http_client
             .post(format!("{}/verify-token", &self.address))

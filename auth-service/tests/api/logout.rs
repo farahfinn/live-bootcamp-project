@@ -1,5 +1,6 @@
 use auth_service::utils::constants::JWT_COOKIE_NAME;
-use reqwest::Url;
+use reqwest::{cookie::Cookie, Url};
+use serde_json::json;
 
 use crate::helpers::TestApp;
 
@@ -37,4 +38,52 @@ async fn should_return_401_if_invalid_token() {
 
     assert_eq!(response.status().as_u16(), 401);
      
+}
+
+#[tokio::test]
+async fn should_return_200_if_valid_jwt_cookie() {
+    let app = TestApp::new().await;
+    let body = json!({
+        "email": "example@email.com",
+        "password": "Password123",
+        "requires2FA": false,
+    });
+    let body1 = json!({
+        "email": "example@email.com",
+        "password": "Password123",
+    });
+    // signup user
+    let _res1 = app.signup(&body).await;
+    // login and get a cookie back from server
+    let _response = app.login(&body1).await;
+    // make sure that response from logout is valid as cookie was set during login
+    let logout_res = app.logout().await;
+
+    assert_eq!(logout_res.status().as_u16(), 200);
+}
+
+
+#[tokio::test]
+async fn should_return_400_if_logout_called_twice_in_a_row() {
+    let app = TestApp::new().await;
+    let body = json!({
+        "email": "example@email.com",
+        "password": "Password123",
+        "requires2FA": false,
+    });
+    let body1 = json!({
+        "email": "example@email.com",
+        "password": "Password123",
+    });
+    // signup user
+    let _res1 = app.signup(&body).await;
+    // login and get a cookie back from server
+    let _response = app.login(&body1).await;
+    // call logout twice and verify response status 
+    let _logout_res = app.logout().await;
+
+    let logout_res1 = app.logout().await;
+
+    assert_eq!(logout_res1.status().as_u16(), 400);
+    
 }
