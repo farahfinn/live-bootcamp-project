@@ -1,9 +1,9 @@
-use axum::{http::StatusCode, response::IntoResponse};
+use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::{cookie::Cookie, CookieJar};
 
-use crate::{domain::error::AuthAPIError, utils::{auth::validate_token, constants::JWT_COOKIE_NAME}};
+use crate::{app_state::AppState, domain::{data_store::BannedTokenStore, error::AuthAPIError}, services::{hashmap_user_store::HashmapUserStore, hashset_banned_token_store::HashsetBannedTokenStore}, utils::{auth::validate_token, constants::JWT_COOKIE_NAME}};
 
-pub async fn logout(jar: CookieJar) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>)  {
+pub async fn logout(State(state): State<AppState<HashmapUserStore, HashsetBannedTokenStore>> ,jar: CookieJar) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>)  {
      // Retrieve JWT cookie from the `CookieJar`
     // Return AuthAPIError::MissingToken is the cookie is not found
     let cookie = jar.get(JWT_COOKIE_NAME).ok_or(AuthAPIError::MissingToken);
@@ -17,8 +17,16 @@ pub async fn logout(jar: CookieJar) -> (CookieJar, Result<impl IntoResponse, Aut
                 (jar, Err(AuthAPIError::InvalidToken))
        
             } else {
-                let jar = jar.remove(Cookie::from(JWT_COOKIE_NAME));
-               (jar, Ok(StatusCode::OK))
+                // add the token to the banned token store
+                let mut banned_store = state.banned_token_store.write().await;
+                let res = banned_store.store_token(token).await;
+                if res.is_err() {
+                    (jar, Err(AuthAPIError::UnexpectedError))
+                }else {
+                    let jar = jar.remove(Cookie::from(JWT_COOKIE_NAME));
+                   (jar, Ok(StatusCode::OK))
+                    
+                }
             }
             
         } ,

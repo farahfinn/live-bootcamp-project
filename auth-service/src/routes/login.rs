@@ -2,11 +2,11 @@ use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
 use serde::{Deserialize, Serialize};
 
-use crate::{app_state::AppState, domain::{data_store::UserStore, email::Email, error::AuthAPIError, password::Password}, services::hashmap_user_store::HashmapUserStore, utils::auth::generate_auth_cookie};
+use crate::{app_state::AppState, domain::{data_store::UserStore, email::Email, error::AuthAPIError, password::Password}, services::{hashmap_user_store::HashmapUserStore, hashset_banned_token_store::HashsetBannedTokenStore}, utils::auth::generate_auth_cookie};
 
 
 
-pub async fn login(State(state):State<AppState<HashmapUserStore>>,
+pub async fn login(State(state):State<AppState<HashmapUserStore, HashsetBannedTokenStore>>,
     jar: CookieJar,
     Json(request): Json<LoginRequest>) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>)
 {

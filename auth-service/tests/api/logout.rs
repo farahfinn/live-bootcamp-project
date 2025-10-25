@@ -1,5 +1,5 @@
-use auth_service::utils::constants::JWT_COOKIE_NAME;
-use reqwest::{cookie::Cookie, Url};
+use auth_service::{domain::data_store::BannedTokenStore, utils::constants::JWT_COOKIE_NAME};
+use reqwest::{Url};
 use serde_json::json;
 
 use crate::helpers::TestApp;
@@ -60,6 +60,39 @@ async fn should_return_200_if_valid_jwt_cookie() {
     let logout_res = app.logout().await;
 
     assert_eq!(logout_res.status().as_u16(), 200);
+}
+
+#[tokio::test]
+async fn pass_if_jwt_is_added_to_banned_token_store() {
+    let app = TestApp::new().await;
+
+    let body = json!({
+        "email": "example@email.com",
+        "password": "Password123",
+        "requires2FA": false,
+    });
+    let body1 = json!({
+        "email": "example@email.com",
+        "password": "Password123",
+    });
+    // signup user
+    let _res1 = app.signup(&body).await;
+    // login and get a cookie back from server
+    let response = app.login(&body1).await;
+    // get the token set in the cookies when you login
+    let token: String = response.cookies().find(|c| c.name() == JWT_COOKIE_NAME).expect("should find the cookie set up already").value().into();
+
+    // logout to put the token in the banned store
+    let _res2 = app.logout().await;
+
+    //try using the token
+    let banned_token_store = app.banned_token_store.read().await;
+
+    // check if the token is in the store
+    let res = banned_token_store.is_token_banned(token).await;
+
+    assert!(res, "should be true");    
+    
 }
 
 
