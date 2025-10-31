@@ -91,7 +91,7 @@ pub struct TwoFACode(String);
 impl TwoFACode {
     pub fn parse(code: String) -> Result<Self, String> {
         // Ensure `code` is a valid 6-digit code
-        if code.len() != 6 {
+        if code.len() != 6 || !code.chars().all(char::is_numeric){
             Err("Code is not 6 digits".into())
         } else {
             Ok(Self(code))

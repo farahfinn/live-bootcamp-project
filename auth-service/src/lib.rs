@@ -5,7 +5,7 @@ use std::error::Error;
 use axum::{http::{Method, StatusCode}, response::IntoResponse, routing::post, serve::Serve, Json, Router};
 use serde::{Deserialize, Serialize};
 use tower_http::{cors::CorsLayer, services::ServeDir};
-use crate::{app_state::AppState, domain::error::AuthAPIError, routes::{login, logout, signup, verify2fa, verify_token }, services::{hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore, hashset_banned_token_store::HashsetBannedTokenStore}};
+use crate::{app_state::AppState, domain::error::AuthAPIError, routes::{login, logout, signup, verify2fa, verify_token }, services::{hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore, hashset_banned_token_store::HashsetBannedTokenStore, mock_email_client::MockEmailClient}};
 
 
 pub mod routes;
@@ -22,7 +22,7 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build(app_state: AppState<HashmapUserStore, HashsetBannedTokenStore, HashmapTwoFACodeStore>, address: &str ) -> Result<Self, Box<dyn Error>> {
+    pub async fn build(app_state: AppState<HashmapUserStore, HashsetBannedTokenStore, HashmapTwoFACodeStore, MockEmailClient>, address: &str ) -> Result<Self, Box<dyn Error>> {
         // Allow the app service (running on our local machine & in production) to call the auth service
         let allowed_origins = [
             "http://localhost:8000".parse()?,

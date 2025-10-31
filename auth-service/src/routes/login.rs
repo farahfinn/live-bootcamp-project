@@ -1,13 +1,12 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::{app_state::AppState, domain::{data_store::{LoginAttemptId, TwoFACode, TwoFACodeStore, UserStore}, email::Email, error::AuthAPIError, password::Password}, services::{hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore, hashset_banned_token_store::HashsetBannedTokenStore}, utils::auth::generate_auth_cookie};
-
+use crate::{app_state::AppState, domain::{data_store::{LoginAttemptId, TwoFACode, TwoFACodeStore, UserStore}, email::Email, email_client::EmailClient, error::AuthAPIError, password::Password}, services::{hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore, hashset_banned_token_store::HashsetBannedTokenStore, mock_email_client::MockEmailClient}, utils::auth::generate_auth_cookie};
 
 
-pub async fn login(State(state):State<AppState<HashmapUserStore, HashsetBannedTokenStore, HashmapTwoFACodeStore>>,
+
+pub async fn login(State(state):State<AppState<HashmapUserStore, HashsetBannedTokenStore, HashmapTwoFACodeStore, MockEmailClient>>,
     jar: CookieJar,
     Json(request): Json<LoginRequest>) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>)
 {
@@ -78,7 +77,7 @@ pub struct TwoFactorAuthResponse {
 
 async fn handle_2fa(jar: CookieJar,
     email: Email,
-    state: &AppState<HashmapUserStore, HashsetBannedTokenStore, HashmapTwoFACodeStore>) -> (CookieJar, Result<(StatusCode, Json<LoginResponse>), AuthAPIError>) {
+    state: &AppState<HashmapUserStore, HashsetBannedTokenStore, HashmapTwoFACodeStore, MockEmailClient>) -> (CookieJar, Result<(StatusCode, Json<LoginResponse>), AuthAPIError>) {
     //Create the cookie using email
     let auth_cookie = generate_auth_cookie(email.clone()).map_err(|_|AuthAPIError::UnexpectedError);
 
@@ -91,11 +90,17 @@ async fn handle_2fa(jar: CookieJar,
     let mut two_fa_codes_store = state.two_fa_code_store.write().await;
 
     // check if the code is added successfully to store
-    match two_fa_codes_store.add_code(email, login_attempt_id.clone(), code).await {
-        Ok(()) => {},
+    match two_fa_codes_store.add_code(email.clone(), login_attempt_id.clone(), code.clone()).await {
+        Ok(()) => { },
         Err(_e) => return (jar, Err(AuthAPIError::UnexpectedError)),
     };
-    
+
+    // Send 2FA code via email client. return AuthApiError if operation fails
+    let email_send_result = MockEmailClient.send_email(&email, login_attempt_id.as_ref(), code.as_ref()).await;
+    match email_send_result {
+        Ok(())=> {},
+        Err(_e) => return (jar, Err(AuthAPIError::UnexpectedError))
+    }    
     // if cookie has issue generating return an error with the empty jar
     let auth_cookie= match auth_cookie{
         Ok(cookie) => cookie,

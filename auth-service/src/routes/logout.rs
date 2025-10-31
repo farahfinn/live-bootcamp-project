@@ -1,9 +1,9 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::{cookie::Cookie, CookieJar};
 
-use crate::{app_state::AppState, domain::{data_store::BannedTokenStore, error::AuthAPIError}, services::{hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore, hashset_banned_token_store::HashsetBannedTokenStore}, utils::{auth::validate_token, constants::JWT_COOKIE_NAME}};
+use crate::{app_state::AppState, domain::{data_store::BannedTokenStore, error::AuthAPIError}, services::{hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore, hashset_banned_token_store::HashsetBannedTokenStore, mock_email_client::MockEmailClient}, utils::{auth::validate_token, constants::JWT_COOKIE_NAME}};
 
-pub async fn logout(State(state): State<AppState<HashmapUserStore, HashsetBannedTokenStore, HashmapTwoFACodeStore>> ,jar: CookieJar) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>)  {
+pub async fn logout(State(state): State<AppState<HashmapUserStore, HashsetBannedTokenStore, HashmapTwoFACodeStore, MockEmailClient>> ,jar: CookieJar) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>)  {
      // Retrieve JWT cookie from the `CookieJar`
     // Return AuthAPIError::MissingToken is the cookie is not found
     let cookie = jar.get(JWT_COOKIE_NAME).ok_or(AuthAPIError::MissingToken);
