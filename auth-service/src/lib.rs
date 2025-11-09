@@ -3,9 +3,11 @@
 use std::error::Error;
 
 use axum::{http::{Method, StatusCode}, response::IntoResponse, routing::post, serve::Serve, Json, Router};
+use redis::{Client, RedisResult};
 use serde::{Deserialize, Serialize};
+use sqlx::{postgres::PgPoolOptions, PgPool};
 use tower_http::{cors::CorsLayer, services::ServeDir};
-use crate::{app_state::AppState, domain::error::AuthAPIError, routes::{login, logout, signup, verify2fa, verify_token }, services::{hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore, hashset_banned_token_store::HashsetBannedTokenStore, mock_email_client::MockEmailClient}};
+use crate::{app_state::AppState, domain::error::AuthAPIError, routes::{login, logout, signup, verify2fa, verify_token }, services::{data_store::PostgresUserStore, mock_email_client::MockEmailClient, redis_banned_token_store::RedisBannedTokenStore, redis_two_fa_code_store::RedisTwoFACodeStore}};
 
 
 pub mod routes;
@@ -22,7 +24,9 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build(app_state: AppState<HashmapUserStore, HashsetBannedTokenStore, HashmapTwoFACodeStore, MockEmailClient>, address: &str ) -> Result<Self, Box<dyn Error>> {
+    pub async fn build(app_state: AppState<PostgresUserStore,
+        RedisBannedTokenStore, RedisTwoFACodeStore, MockEmailClient>,
+        address: &str ) -> Result<Self, Box<dyn Error>> {
         // Allow the app service (running on our local machine & in production) to call the auth service
         let allowed_origins = [
             "http://localhost:8000".parse()?,
@@ -80,4 +84,14 @@ impl IntoResponse for AuthAPIError {
 
         (status, body).into_response()
     }
+}
+
+pub async fn get_postgres_pool(url: &str) -> Result<PgPool, sqlx::Error> {
+    // Create a new PostgreSQL connection pool
+    PgPoolOptions::new().max_connections(5).connect(url).await
+}
+
+pub fn get_redis_client(redis_hostname: String) -> RedisResult<Client> {
+    let redis_url = format!("redis://{}/", redis_hostname);
+    redis::Client::open(redis_url) 
 }

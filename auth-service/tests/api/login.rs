@@ -1,4 +1,4 @@
-use auth_service::{domain::email::Email, routes::TwoFactorAuthResponse, utils::constants::JWT_COOKIE_NAME};
+use auth_service::{domain::{data_store::TwoFACodeStore, email::Email}, routes::TwoFactorAuthResponse, utils::constants::JWT_COOKIE_NAME};
 use serde_json::json;
 
 use crate::helpers::{get_random_email, TestApp};
@@ -6,7 +6,7 @@ use crate::helpers::{get_random_email, TestApp};
 
 #[tokio::test]
 async fn should_return_422_if_malformed_credentials() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let body = json!({
         "email": "example@email.com"
     });
@@ -15,12 +15,15 @@ async fn should_return_422_if_malformed_credentials() {
     let response = app.login(&body).await;
 
     assert_eq!(response.status().as_u16(), 422);
+    // call clean up
+    app.clean_up().await;
+
 }
 
 
 #[tokio::test]
 async fn should_return_400_if_invalid_input() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     // body of json has invalid input
     let body = json!({
@@ -37,6 +40,9 @@ async fn should_return_400_if_invalid_input() {
 
     assert_eq!(response.status().as_u16(), 400);
     assert_eq!(response2.status().as_u16(), 400);
+    // call clean up
+    app.clean_up().await;
+
 }
 
 
@@ -44,7 +50,7 @@ async fn should_return_400_if_invalid_input() {
 async fn should_return_401_if_incorrect_credentials() {
     // Call the log-in route with incorrect credentials and assert
     // that a 401 HTTP status code is returned along with the appropriate error message.     
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let body = json!({
         "email": "example@email.com",
         "password": "Password123",
@@ -61,13 +67,16 @@ async fn should_return_401_if_incorrect_credentials() {
     let response2 = app.login(&body2).await;
 
     assert_eq!(response2.status().as_u16(), 401);
+    // call clean up
+    app.clean_up().await;
+
     
 }
 
 
  #[tokio::test]
 async fn should_return_200_if_valid_creds_and_2fa_disabled() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let random_email = get_random_email();
     
     let signup_body = json!({
@@ -94,11 +103,14 @@ async fn should_return_200_if_valid_creds_and_2fa_disabled() {
         .expect("No auth cookie found");
 
     assert!(!auth_cookie.value().is_empty());
+    // call clean up
+    app.clean_up().await;
+
 }
 
 #[tokio::test]
 async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let random_email = get_random_email();
     let signup_body = json!({
@@ -127,10 +139,21 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
 
     // get id from the response
     let login_attempt_id = response_json.login_attempt_id;
-    // code store with the two_fa_codes
-    let codes_store = app.two_fa_code_store.read().await;
-    let email = Email::parse(random_email).expect("email should be parsed ok");
-    let (login_attempt_id_from_app, _two_fa_code_from_app) = codes_store.codes.get(&email).expect("to find an entry with the email key");
 
-    assert_eq!(&login_attempt_id, login_attempt_id_from_app.as_ref());
+    {
+        // Needed new scope so that I can borrow the app to get code store while having a mutable borrow later
+        // to drop.
+        
+        // code store with the two_fa_codes
+        let codes_store = app.two_fa_code_store.read().await;
+        let email = Email::parse(random_email).expect("email should be parsed ok");
+        let (login_attempt_id_from_app, _two_fa_code_from_app) = codes_store
+            .get_code(&email)
+            .await
+            .expect("should find the code ");
+        assert_eq!(&login_attempt_id, login_attempt_id_from_app.as_ref());
+    }
+    // call clean up
+    app.clean_up().await;
+
 }

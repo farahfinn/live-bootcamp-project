@@ -2,9 +2,9 @@ use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
 use serde::Deserialize;
 
-use crate::{app_state::AppState, domain::{data_store::{LoginAttemptId, TwoFACode, TwoFACodeStore}, email::Email, error::AuthAPIError}, services::{hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore, hashset_banned_token_store::HashsetBannedTokenStore, mock_email_client::MockEmailClient}, utils::auth::generate_auth_cookie};
+use crate::{app_state::AppState, domain::{data_store::{LoginAttemptId, TwoFACode, TwoFACodeStore}, email::Email, error::AuthAPIError}, services::{data_store::PostgresUserStore, mock_email_client::MockEmailClient, redis_banned_token_store::RedisBannedTokenStore, redis_two_fa_code_store::RedisTwoFACodeStore}, utils::auth::generate_auth_cookie};
 
-pub async fn verify2fa(State(state): State<AppState<HashmapUserStore, HashsetBannedTokenStore, HashmapTwoFACodeStore, MockEmailClient>>,
+pub async fn verify2fa(State(state): State<AppState<PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore, MockEmailClient>>,
     jar: CookieJar,
     Json(request): Json<VerifyRequest>) -> (CookieJar, impl IntoResponse) {
     // Because the function accepts a VerifyRequest Deserialized Json it will return

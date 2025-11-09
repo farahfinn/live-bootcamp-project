@@ -15,8 +15,12 @@ impl BannedTokenStore for HashsetBannedTokenStore {
        }
     }
 
-    async fn is_token_banned(&self, token:String) -> bool{
-         self.0.contains(&token)
+    async fn is_token_banned(&self, token:String) -> Result<bool, BannedTokenStoreError>{
+         if self.0.contains(&token) {
+             Ok(true)
+         } else {
+            Err(BannedTokenStoreError::UnexpectedError)  
+         }
     }
 }
 
@@ -63,8 +67,8 @@ mod tests {
         // check if token is banned
         let result = store.is_token_banned(token.into()).await;
         let result2 = store.is_token_banned(token2.into()).await;
-        assert!(result);
-        assert!(!result2, "This should be false ");
+        assert!(result.is_ok());
+        assert!(result2.is_err(), "This should be false ");
         
     }
 }

@@ -17,7 +17,7 @@ pub trait UserStore  {
 pub trait BannedTokenStore {
     async fn store_token(&mut self,token: String)-> Result<(), BannedTokenStoreError>; 
     
-    async fn is_token_banned(&self, token: String) -> bool;
+    async fn is_token_banned(&self, token: String) -> Result<bool, BannedTokenStoreError>;
 }
 
 #[derive(Debug, PartialEq)]
@@ -25,12 +25,13 @@ pub enum UserStoreError {
     UserAlreadyExists,
     UserNotFound,
     InvalidCredentials,
-    UnexpecteError,
+    UnexpectedError,
 }
 
 #[derive(Debug,PartialEq)]
 pub enum BannedTokenStoreError {
-    TokenAlreadyInStore
+    TokenAlreadyInStore,
+    UnexpectedError
 }
 // This trait represents the interface all concrete 2FA code stores should implement
 #[async_trait::async_trait]

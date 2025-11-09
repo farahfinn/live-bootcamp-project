@@ -4,7 +4,7 @@ use crate::helpers::{get_random_email, TestApp};
 
 #[tokio::test]
 async fn signup_returns_201_if_valid_input() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let email = get_random_email();
     let body = serde_json::json!({
@@ -31,11 +31,14 @@ async fn signup_returns_201_if_valid_input() {
     );
 
     
+    // call clean up
+    app.clean_up().await;
+
 }
 
 #[tokio::test]
 async fn should_return_422_if_malformed_input() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let random_email = get_random_email();
 
@@ -59,11 +62,14 @@ async fn should_return_422_if_malformed_input() {
         // assert with custom panic message
         assert_eq!(response.status().as_u16(), 422, "Failed to input: {:?}", test_case);
     }
+    // call clean up
+    app.clean_up().await;
+
 }
 
 #[tokio::test]
 async fn should_return_400_if_invalid_input() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     // The input is considered invalid if:
     // - The email is empty or does not contain '@'
     // - The password is less than 8 characters
@@ -90,12 +96,15 @@ async fn should_return_400_if_invalid_input() {
 
         assert_eq!(response.status().as_u16(), 400);
     }
+    // call clean up
+    app.clean_up().await;
+
 }
 
 
 #[tokio::test]
 async fn should_return_409_if_email_already_exists() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
  
     let input = serde_json::json!({
          "email": "example@email.com",
@@ -107,4 +116,7 @@ async fn should_return_409_if_email_already_exists() {
     let response = app.signup(&input).await;
 
     assert_eq!(response.status().as_u16(), 409);
+    // call clean up
+    app.clean_up().await;
+
 }

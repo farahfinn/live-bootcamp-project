@@ -16,17 +16,20 @@ use crate::helpers::TestApp;
 
 #[tokio::test]
 async fn should_return_400_if_jwt_cookie_missing() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     // get a response without sending a cookie to the server
     let response = app.logout().await;
 
     assert_eq!(response.status().as_u16(), 400);
+    // call clean up
+    app.clean_up().await;
+
 }
 
 #[tokio::test]
 async fn should_return_401_if_invalid_token() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     //add invalid cookie
     app.cookie_jar.add_cookie_str(
@@ -37,12 +40,15 @@ async fn should_return_401_if_invalid_token() {
     let response = app.logout().await;
 
     assert_eq!(response.status().as_u16(), 401);
+    // call clean up
+    app.clean_up().await;
+
      
 }
 
 #[tokio::test]
 async fn should_return_200_if_valid_jwt_cookie() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let body = json!({
         "email": "example@email.com",
         "password": "Password123",
@@ -60,11 +66,14 @@ async fn should_return_200_if_valid_jwt_cookie() {
     let logout_res = app.logout().await;
 
     assert_eq!(logout_res.status().as_u16(), 200);
+    // call clean up
+    app.clean_up().await;
+
 }
 
 #[tokio::test]
 async fn pass_if_jwt_is_added_to_banned_token_store() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let body = json!({
         "email": "example@email.com",
@@ -79,26 +88,31 @@ async fn pass_if_jwt_is_added_to_banned_token_store() {
     let _res1 = app.signup(&body).await;
     // login and get a cookie back from server
     let response = app.login(&body1).await;
-    // get the token set in the cookies when you login
+    // get the token that is set in the cookies when you login
     let token: String = response.cookies().find(|c| c.name() == JWT_COOKIE_NAME).expect("should find the cookie set up already").value().into();
 
     // logout to put the token in the banned store
     let _res2 = app.logout().await;
+    {
+        // New scope to borrow the app struct immutably and then drop it after in the outer scope
 
-    //try using the token
-    let banned_token_store = app.banned_token_store.read().await;
+        //try using the token
+        let banned_token_store = app.banned_token_store.read().await;
 
-    // check if the token is in the store
-    let res = banned_token_store.is_token_banned(token).await;
+        // check if the token is in the store
+        let res = banned_token_store.is_token_banned(token).await;
 
-    assert!(res, "should be true");    
+        assert!(res.is_ok(), "should be true");    
+    }    // call clean up
+    app.clean_up().await;
+
     
 }
 
 
 #[tokio::test]
 async fn should_return_400_if_logout_called_twice_in_a_row() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let body = json!({
         "email": "example@email.com",
         "password": "Password123",
@@ -118,5 +132,8 @@ async fn should_return_400_if_logout_called_twice_in_a_row() {
     let logout_res1 = app.logout().await;
 
     assert_eq!(logout_res1.status().as_u16(), 400);
+    // call clean up
+    app.clean_up().await;
+
     
 }

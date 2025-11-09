@@ -1,24 +1,33 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::Deserialize;
 
-use crate::{app_state::AppState, services::{hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore, hashset_banned_token_store::HashsetBannedTokenStore, mock_email_client::MockEmailClient}, utils::auth::validate_token};
+use crate::{app_state::AppState, domain::data_store::BannedTokenStore, services::{data_store::PostgresUserStore, mock_email_client::MockEmailClient, redis_banned_token_store::RedisBannedTokenStore, redis_two_fa_code_store::RedisTwoFACodeStore}, utils::auth::validate_token};
 
-pub async fn verify_token(State(AppState {banned_token_store, .. }): State<AppState<HashmapUserStore, HashsetBannedTokenStore, HashmapTwoFACodeStore, MockEmailClient>>,Json(request): Json<TokenRequest>) -> impl IntoResponse {
+pub async fn verify_token(State(AppState {banned_token_store, .. }): State<AppState<PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore, MockEmailClient>>,Json(request): Json<TokenRequest>) -> impl IntoResponse {
     let token = request.token;
 
     let banned_store = banned_token_store.read().await;
 
-    if banned_store.0.contains(&token) {
-        StatusCode::UNAUTHORIZED.into_response()
-    } else {
-        let validation_result = validate_token(&token).await;
-
-        if validation_result.is_err(){
+    match banned_store.is_token_banned(token.clone()).await {
+        Ok(true) => {
+            // the token is banned
             StatusCode::UNAUTHORIZED.into_response()
-        } else {
-            StatusCode::OK.into_response() 
+        },
+        Ok(false) => {
+            // Token is not banned, proceed with the validation
+            let validation_result = validate_token(&token).await;
+
+            if validation_result.is_err(){
+                StatusCode::UNAUTHORIZED.into_response()
+            } else {
+                StatusCode::OK.into_response() 
+            }
         }
-    } 
+        Err(_) => {
+            StatusCode::UNAUTHORIZED.into_response()
+        }
+    }
+
     
 }
 

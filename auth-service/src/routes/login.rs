@@ -2,11 +2,11 @@ use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use axum_extra::extract::CookieJar;
 use serde::{Deserialize, Serialize};
 
-use crate::{app_state::AppState, domain::{data_store::{LoginAttemptId, TwoFACode, TwoFACodeStore, UserStore}, email::Email, email_client::EmailClient, error::AuthAPIError, password::Password}, services::{hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore, hashset_banned_token_store::HashsetBannedTokenStore, mock_email_client::MockEmailClient}, utils::auth::generate_auth_cookie};
+use crate::{app_state::AppState, domain::{data_store::{LoginAttemptId, TwoFACode, TwoFACodeStore, UserStore}, email::Email, email_client::EmailClient, error::AuthAPIError, password::Password}, services::{data_store::PostgresUserStore, mock_email_client::MockEmailClient, redis_banned_token_store::RedisBannedTokenStore, redis_two_fa_code_store::RedisTwoFACodeStore}, utils::auth::generate_auth_cookie};
 
 
 
-pub async fn login(State(state):State<AppState<HashmapUserStore, HashsetBannedTokenStore, HashmapTwoFACodeStore, MockEmailClient>>,
+pub async fn login(State(state):State<AppState<PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore, MockEmailClient>>,
     jar: CookieJar,
     Json(request): Json<LoginRequest>) -> (CookieJar, Result<impl IntoResponse, AuthAPIError>)
 {
@@ -77,7 +77,7 @@ pub struct TwoFactorAuthResponse {
 
 async fn handle_2fa(jar: CookieJar,
     email: Email,
-    state: &AppState<HashmapUserStore, HashsetBannedTokenStore, HashmapTwoFACodeStore, MockEmailClient>) -> (CookieJar, Result<(StatusCode, Json<LoginResponse>), AuthAPIError>) {
+    state: &AppState<PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore, MockEmailClient>) -> (CookieJar, Result<(StatusCode, Json<LoginResponse>), AuthAPIError>) {
     //Create the cookie using email
     let auth_cookie = generate_auth_cookie(email.clone()).map_err(|_|AuthAPIError::UnexpectedError);
 

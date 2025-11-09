@@ -1,4 +1,4 @@
-use auth_service::{domain::{data_store::{LoginAttemptId, TwoFACodeStore}, email::Email}, routes::LoginRequest, utils::constants::JWT_COOKIE_NAME};
+use auth_service::{domain::{data_store::TwoFACodeStore, email::Email}, utils::constants::JWT_COOKIE_NAME};
 use serde_json::json;
 use uuid::Uuid;
 
@@ -20,7 +20,7 @@ use crate::helpers::TestApp;
 #[tokio::test]
 async fn should_return_422_if_malformed_input() {
     
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
     let malformed_body = [
         json!({
         "email": "example@email.com",
@@ -38,12 +38,15 @@ async fn should_return_422_if_malformed_input() {
         let response = app.verify2fa(&body).await;
         assert_eq!(response.status().as_u16(), 422);
     }
+    // call clean up
+    app.clean_up().await;
+
 }
 
 
 #[tokio::test]
 async fn should_return_400_if_invalid_input() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let valid_uuid: String = Uuid::new_v4().into();
     let invalid_body = [
@@ -74,11 +77,14 @@ async fn should_return_400_if_invalid_input() {
         let response = app.verify2fa(&body).await;
         assert_eq!(response.status().as_u16(), 400);
     }
+    // call clean up
+    app.clean_up().await;
+
 }
 
 #[tokio::test]
 async fn should_return_401_if_incorrect_credentials() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let signup_body = json!({
        "email": "example@email.com",
@@ -124,11 +130,14 @@ async fn should_return_401_if_incorrect_credentials() {
 
         assert_eq!(response.status().as_u16(), 401);
     }
+    // call clean up
+    app.clean_up().await;
+
 }
 
 #[tokio::test]
 async fn should_return_401_if_old_code() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let signup_body = json!({
        "email": "example@email.com",
@@ -168,11 +177,14 @@ async fn should_return_401_if_old_code() {
 
     assert_eq!(response.status().as_u16(), 401);
     
+    // call clean up
+    app.clean_up().await;
+
 }
 
 #[tokio::test]
 async fn should_return_200_if_correct_code() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let signup_body = json!({
        "email": "example@email.com",
@@ -217,11 +229,14 @@ async fn should_return_200_if_correct_code() {
     assert!(!auth_cookie.value().is_empty());
     
     
+    // call clean up
+    app.clean_up().await;
+
 }
 
 #[tokio::test]
 async fn should_return_401_if_same_code_twice() {
-        let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let signup_body = json!({
        "email": "example@email.com",
@@ -258,4 +273,7 @@ async fn should_return_401_if_same_code_twice() {
     let response = app.verify2fa(&verify_body).await;
 
     assert_eq!(response.status().as_u16(), 401);
+    // call clean up
+    app.clean_up().await;
+
 }
